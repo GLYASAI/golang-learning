@@ -1,15 +1,40 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 func main() {
-	arr1 := [...]string {"alpha", "beta", "gamma"}
-	arr2 := [3]string{}
+	// gen generates integers in a separate goroutine and
+	// sends them to the returned channel.
+	// The callers of gen need to cancel the context once
+	// they are done consuming generated integers not to leak
+	// the internal goroutine started by gen.
+	gen := func(ctx context.Context) <-chan int {
+		dst := make(chan int)
+		n := 1
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					fmt.Printf("cancel.")
+					return // returning not to leak the goroutine
+				case dst <- n:
+					n++
+				}
+			}
+		}()
+		return dst
+	}
 
-	arr2 = arr1
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // cancel when we are finished consuming integers
 
-	arr2[0] = "alpha2"
-	fmt.Println(arr1[0])
-	fmt.Println(arr2[0])
+	for n := range gen(ctx) {
+		fmt.Println(n)
+		if n == 5 {
+			break
+		}
+	}
 }
-
