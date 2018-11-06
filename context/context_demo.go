@@ -18,3 +18,10 @@ func cancelTest(ctx context.Context) {
 		time.Sleep(1 * time.Second)
 	}
 }
+
+func closeChan(stop chan struct{}) {
+	select {
+	case <-stop:
+		fmt.Print("execute...")
+	}
+}
